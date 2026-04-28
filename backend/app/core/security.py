@@ -70,15 +70,18 @@ def create_admin_access_token(
 ) -> tuple[str, datetime]:
     settings = get_settings()
     now = datetime.now(tz=UTC)
-    expires_at = now + timedelta(minutes=settings.admin_access_token_ttl_minutes)
+    ttl_minutes = settings.admin_access_token_ttl_minutes
+    non_expiring = ttl_minutes <= 0
+    expires_at = now + timedelta(days=36500) if non_expiring else now + timedelta(minutes=ttl_minutes)
     payload = {
         "sub": str(admin_user_id),
         "role": role,
         "zone": zone,
         "iat": int(now.timestamp()),
-        "exp": int(expires_at.timestamp()),
         "type": "access",
     }
+    if not non_expiring:
+        payload["exp"] = int(expires_at.timestamp())
     token = jwt.encode(
         payload,
         key=settings.admin_jwt_secret,
