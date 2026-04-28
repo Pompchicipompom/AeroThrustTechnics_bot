@@ -1,0 +1,4 @@
+[console_scripts]
+create-admin-user = app.scripts.create_admin_user:main
+run-api = app.main:run
+run-bot = app.bot.runner:run
