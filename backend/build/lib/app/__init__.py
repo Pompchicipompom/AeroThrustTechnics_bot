@@ -1,1 +1,0 @@
-"""Aerotrust backend application package."""
