@@ -1,18 +1,29 @@
-# Отчёт о версиях (по репозиторию)
+# Версии и зависимости
 
-Сформировано при подготовке к передаче в промышленную среду.
+Документ фиксирует версии компонентов по состоянию репозитория.  
+Фактические версии среды определяются Dockerfile, `docker-compose*.yml` и lock-файлами при сборке образов.
 
 ## Приложение
 
-| Компонент | Версия / закрепление |
-|-----------|----------------------|
+| Компонент | Версия |
+|-----------|--------|
 | Backend-пакет | `aerotrust-backend` `0.1.0` (`backend/pyproject.toml`) |
 | Admin UI | `aerotrust-admin-ui` `0.2.0` (`admin/package.json`) |
 | Python | `>=3.12` (образ `python:3.12-slim`) |
-| Node (сборка) | `node:20-alpine` |
-| Nginx (admin, prod) | `nginx:1.27-alpine` |
+| Node (сборка frontend) | `node:20-alpine` |
+| Nginx (admin, production) | `nginx:1.27-alpine` |
 
-## Зависимости backend (диапазоны из `pyproject.toml`)
+## Образы инфраструктуры
+
+| Сервис | Образ |
+|--------|-------|
+| PostgreSQL | `postgres:16-alpine` |
+| Redis | `redis:7-alpine` |
+| `backend` / `bot` | сборка `./backend` на базе `python:3.12-slim` |
+| `admin` (dev) | сборка `./admin` на базе `node:20-alpine` |
+| `admin` (prod) | multi-stage: `node:20-alpine` → `nginx:1.27-alpine` (`Dockerfile.prod`) |
+
+## Backend-зависимости (`backend/pyproject.toml`)
 
 | Пакет | Ограничение |
 |-------|-------------|
@@ -27,24 +38,15 @@
 | PyJWT | `>=2.8.0,<3.0.0` |
 | pydantic-settings | `>=2.2.1,<3.0.0` |
 
-## Зависимости admin (`admin/package.json` / lockfile)
+## Frontend-зависимости (`admin/package.json`)
 
 | Пакет | Ограничение |
 |-------|-------------|
 | react / react-dom | `^18.3.1` |
 | Vite | `^5.4.19` |
 | typescript | `^5.8.3` |
-| Lockfile | есть `admin/package-lock.json` (в prod-сборке используется `npm ci`) |
 
-## Образы инфраструктуры (`docker-compose*.yml`)
-
-| Сервис | Образ |
-|--------|-------|
-| PostgreSQL | `postgres:16-alpine` |
-| Redis | `redis:7-alpine` |
-| backend / bot | сборка `./backend` (`python:3.12-slim`) |
-| admin (dev) | сборка `./admin` (`node:20-alpine`) |
-| admin (prod) | сборка `./admin` + `Dockerfile.prod` (`nginx:1.27-alpine`) |
+Lock-файл: `admin/package-lock.json` (в production-сборке используется `npm ci`).
 
 ## Миграции базы данных
 
@@ -53,9 +55,17 @@
 | `20260421_0001` | Начальная схема |
 | `20260421_0002` | Индексы для admin API |
 
-Применение: `alembic upgrade head` (через скрипт деплоя или Compose).
+Применение: `alembic upgrade head`.
 
-## Примечания
+## Фиксация версий среды
 
-- Точные версии pip/npm внутри образов зависят от разрешения диапазонов на момент сборки.
-- `TODO: проверить вручную` — после первой сборки на сервере компании при необходимости снять `pip freeze` из контейнера `backend` и приложить к эксплуатационным заметкам.
+- Базовые образы задаются в Dockerfile и `docker-compose*.yml`
+- Python-зависимости — в `backend/pyproject.toml`
+- Node-зависимости — в `admin/package.json` и `admin/package-lock.json`
+- Точные версии пакетов внутри собранного образа зависят от разрешения диапазонов на момент сборки
+
+Для инвентаризации после сборки:
+
+```bash
+docker compose -f docker-compose.prod.yml exec backend pip freeze
+```

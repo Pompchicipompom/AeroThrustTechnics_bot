@@ -2,6 +2,9 @@
 .env.local
 .env.production
 .env.*.local
+SECRETS_HANDOFF.env
+SECRETS_HANDOFF.*
+*_HANDOFF.env
 
 .venv/
 __pycache__/

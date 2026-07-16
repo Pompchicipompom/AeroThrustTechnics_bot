@@ -3,7 +3,7 @@
 ## Доступные скрипты
 
 `install_docker_ubuntu.sh`
-- Минимальная установка Docker Engine + плагина Docker Compose на Ubuntu.
+- Минимальная установка Docker Engine и плагина Docker Compose на Ubuntu.
 - Запускать от `root`.
 
 `deploy_vps.sh`
@@ -31,4 +31,4 @@ nano .env
 bash infra/scripts/deploy_vps.sh
 ```
 
-Подробные инструкции для IT компании: `deploy_bundle/README_DEPLOY.md`.
+Полная инструкция: `deploy_bundle/README_DEPLOY.md`.

@@ -21,11 +21,10 @@ backend/        API, bot, ORM, migrations, tests
 admin/          web admin (React + Vite); prod = nginx static
 infra/          deploy/backup scripts
 docs/           product/tech docs (planning)
-deploy_bundle/  пакет для передачи IT компании (деплой, секреты, аудит)
+deploy_bundle/  техническая документация по развёртыванию и эксплуатации
 ```
 
-Production-инструкция: [`deploy_bundle/README_DEPLOY.md`](deploy_bundle/README_DEPLOY.md).  
-Что передать компании: [`deploy_bundle/WHAT_TO_SEND_TO_COMPANY.md`](deploy_bundle/WHAT_TO_SEND_TO_COMPANY.md).
+Инструкция по развёртыванию: [`deploy_bundle/README_DEPLOY.md`](deploy_bundle/README_DEPLOY.md).
 
 ## Предварительные требования
 1. Docker Desktop запущен.
