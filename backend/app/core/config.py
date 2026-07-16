@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     admin_access_token_ttl_minutes: int = Field(
         default=480,
         validation_alias="ADMIN_ACCESS_TOKEN_TTL_MINUTES",
+        gt=0,
     )
     admin_password_hash_iterations: int = Field(
         default=390000,

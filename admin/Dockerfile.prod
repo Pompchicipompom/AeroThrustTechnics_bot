@@ -11,7 +11,9 @@ RUN npm run build
 FROM nginx:1.27-alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+# SPA is served under the `/admin/` URL prefix, so the built files must live
+# under the matching directory inside the nginx document root.
+COPY --from=build /app/dist /usr/share/nginx/html/admin
 
 EXPOSE 80
 

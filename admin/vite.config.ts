@@ -3,7 +3,12 @@ import react from "@vitejs/plugin-react";
 
 const backendProxyTarget = process.env.VITE_PROXY_TARGET ?? "http://localhost:8000";
 
-export default defineConfig({
+// In production the admin SPA is served under `/admin/` by nginx, so all asset
+// URLs in the built `index.html` must be prefixed accordingly. In dev we keep
+// the base at `/` so the Vite dev server can proxy `/admin/*` API calls to the
+// backend without conflicting with the SPA routes.
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "/admin/" : "/",
   plugins: [react()],
   resolve: {
     alias: {
@@ -34,4 +39,4 @@ export default defineConfig({
       "/healthz": backendProxyTarget,
     },
   },
-});
+}));
