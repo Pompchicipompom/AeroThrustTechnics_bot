@@ -208,9 +208,5 @@ Volumes, которые нужно сохранять при переносе с
 - `aerotrust_uploads_data` — файлы вложений
 - `aerotrust_redis_data` — FSM (некритично)
 
-## Известные ограничения
-- В локальном `docker-compose.yml` admin работает как Vite dev server.
-- Для VPS используется `docker-compose.prod.yml` со static-сборкой и Nginx.
-- E2E-проверка UI требует ручного открытия браузера (в CI не автоматизирована).
-- Для полной базовой проверки бота нужен валидный `TELEGRAM_BOT_TOKEN`.
-- Runtime-образ backend не включает dev-зависимости и тесты (запуск тестов — через bind-mount, см. выше).
+
+
