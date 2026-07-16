@@ -1,9 +1,18 @@
 .env
+.env.local
+.env.production
+.env.*.local
+
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 .mypy_cache/
+.DS_Store
+*.bak
+*.bak_*
+*.swp
+*~
 
 backend/.venv/
 backend/.pytest_cache/
@@ -16,3 +25,14 @@ admin/tsconfig.tsbuildinfo
 
 uploads/
 postgres_data/
+redis_data/
+
+# Local dumps / archives (keep out of git)
+*.sql
+*.sql.gz
+*.tar
+*.tar.gz
+*.zip
+!docs/**
+
+backups/

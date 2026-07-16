@@ -17,11 +17,14 @@ MVP системы доверенных сообщений:
 
 ## Структура
 ```text
-backend/   API, bot, ORM, migrations, tests
-admin/     web admin (React + Vite)
-infra/     infra configs/scripts
-docs/      source-of-truth документы
+backend/        API, bot, ORM, migrations, tests
+admin/          web admin (React + Vite); prod = nginx static
+infra/          deploy/backup scripts
+docs/           product/tech docs (planning)
+deploy_bundle/  пакет для передачи IT компании (деплой, секреты, аудит)
 ```
+
+Production-инструкция: [`deploy_bundle/README_DEPLOY.md`](deploy_bundle/README_DEPLOY.md).
 
 ## Предварительные требования
 1. Docker Desktop запущен.
@@ -175,19 +178,34 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:8000/admin/audit-logs?page=
 2. В UI для такого report отображается только метка `anonymous` без `technical_id`/`telegram_username`.
 
 ## Полезные команды
-```powershell
+```bash
 # Статус сервисов
 docker compose ps
 
 # Логи
+docker compose logs -f
+docker compose logs -f bot
+docker compose logs -f backend
+docker compose logs -f admin
 docker compose logs backend --tail=100
-docker compose logs admin --tail=100
 
-docker compose logs bot --tail=100
-
-# Остановка
+# Остановка (данные в volumes сохраняются)
 docker compose down
+
+# ОПАСНО: удаляет БД и uploads
+# docker compose down -v
 ```
+
+### Backup (prod)
+```bash
+bash infra/scripts/backup_postgres.sh
+bash infra/scripts/backup_uploads.sh
+```
+
+Volumes, которые нужно сохранять при переносе сервера:
+- `aerotrust_postgres_data` — обращения и пользователи
+- `aerotrust_uploads_data` — файлы вложений
+- `aerotrust_redis_data` — FSM (некритично)
 
 ## Known limitations
 - В локальном `docker-compose.yml` admin работает как Vite dev server.

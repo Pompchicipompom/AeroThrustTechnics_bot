@@ -55,6 +55,11 @@ class Settings(BaseSettings):
         validation_alias="BOT_RATE_LIMIT_BLOCK_SECONDS",
     )
     uploads_root: str = Field(default="/app/uploads", validation_alias="UPLOADS_ROOT")
+    max_report_text_length: int = Field(
+        default=4000,
+        validation_alias="MAX_REPORT_TEXT_LENGTH",
+        gt=0,
+    )
     max_attachment_size_mb: int = Field(default=10, validation_alias="MAX_ATTACHMENT_SIZE_MB")
     max_attachments_per_report: int = Field(default=5, validation_alias="MAX_ATTACHMENTS_PER_REPORT")
     allowed_document_extensions: str = Field(

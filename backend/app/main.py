@@ -15,7 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name)
+    docs_enabled = settings.app_env.lower() not in {"prod", "production"}
+    app = FastAPI(
+        title=settings.app_name,
+        docs_url="/docs" if docs_enabled else None,
+        redoc_url="/redoc" if docs_enabled else None,
+        openapi_url="/openapi.json" if docs_enabled else None,
+    )
     app.include_router(api_router)
 
     @app.exception_handler(SQLAlchemyError)

@@ -232,6 +232,13 @@ async def capture_text(message: Message, state: FSMContext) -> None:
         await message.answer("Текст не может быть пустым. Введите сообщение.")
         return
 
+    settings = get_settings()
+    if len(text) > settings.max_report_text_length:
+        await message.answer(
+            f"Текст слишком длинный. Максимум {settings.max_report_text_length} символов."
+        )
+        return
+
     await state.update_data(text=text)
     await state.set_state(ReportStates.waiting_attachments)
     await message.answer(REPORT_ATTACHMENTS_PROMPT, reply_markup=report_attachments_keyboard())

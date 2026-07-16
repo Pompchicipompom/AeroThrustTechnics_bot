@@ -14,6 +14,12 @@
 - Поднимает `backend`/`bot`/`admin`.
 - Показывает статус и выполняет базовые HTTP-проверки (если установлен `curl`).
 
+`backup_postgres.sh`
+- `pg_dump` → `backups/aerotrust_*.sql.gz` (по умолчанию `docker-compose.prod.yml`).
+
+`backup_uploads.sh`
+- tar.gz содержимого `/app/uploads` из контейнера `backend`.
+
 ## Быстрый запуск
 
 ```bash

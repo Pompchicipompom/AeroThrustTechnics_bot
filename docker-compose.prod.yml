@@ -73,8 +73,6 @@ services:
     command: ["python", "-m", "app.bot.runner"]
     volumes:
       - uploads_data:/app/uploads
-    extra_hosts:
-      - "api.telegram.org:149.154.167.220"
 
   admin:
     build:

@@ -22,6 +22,8 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -47,6 +49,15 @@ services:
       - "8000:8000"
     volumes:
       - uploads_data:/app/uploads
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${API_PORT:-8000}/healthz')\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 6
 
   bot:
     build:
@@ -58,6 +69,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      backend:
         condition: service_healthy
     command: ["python", "-m", "app.bot.runner"]
     volumes:
@@ -71,10 +84,11 @@ services:
       VITE_PROXY_TARGET: http://backend:8000
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "5173:5173"
 
 volumes:
   postgres_data:
+  redis_data:
   uploads_data:
