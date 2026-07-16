@@ -1,6 +1,6 @@
-# Aerotrust Trusted Messages MVP
+# АэроТрастТехникс Система доверительных сообщений
 
-MVP системы доверенных сообщений Aerotrust Technics:
+MVP системы доверенных сообщений:
 - Telegram bot (aiogram 3);
 - Backend API (FastAPI);
 - PostgreSQL + SQLAlchemy 2 + Alembic;
