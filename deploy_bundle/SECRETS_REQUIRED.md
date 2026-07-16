@@ -1,50 +1,79 @@
-# Secrets required (do not put these in git)
+# Секретные данные (не хранить в git)
 
-Pass these to the company's IT via a secure channel (password manager, sealed note, 1:1 handoff).
-**Never** put real values into the repository, deploy archive, Slack/email plain text if avoidable, or screenshots.
+Этот документ описывает **какие** секретные данные нужны для запуска.  
+Реальные значения сюда и в репозиторий **не записывать**.
 
-## Required
+## Кто заполняет
 
-| Secret / value | Env var | Where used |
-|----------------|---------|------------|
-| Telegram Bot Token | `TELEGRAM_BOT_TOKEN` | bot container |
-| PostgreSQL password | `POSTGRES_PASSWORD` | postgres + `DATABASE_URL` |
-| Database URL | `DATABASE_URL` | backend + bot (`postgresql+asyncpg://USER:PASSWORD@postgres:5432/DB`) |
-| Admin JWT signing secret | `ADMIN_JWT_SECRET` | backend admin auth |
-| Admin UI login email | (bootstrap CLI) | `create-admin-user --email ...` |
-| Admin UI login password | (bootstrap CLI) | `create-admin-user --password ...` |
+| Кто | Что делает |
+|-----|------------|
+| Заказчик / компания | Выдаёт токен Telegram-бота, согласует пароли админки, домен |
+| IT компании на сервере | Создаёт `.env` из `.env.production.example` и подставляет значения |
+| Подрядчик (если деплоит) | Может сгенерировать пароли/`ADMIN_JWT_SECRET` и передать компании по защищённому каналу |
 
-`DATABASE_URL` password **must** match `POSTGRES_PASSWORD`.
+Рекомендуется заполнять файл `.env` **непосредственно на сервере компании**, а не в общей переписке и не в архиве проекта.
 
-## Strongly recommended
+## Как передавать реальные значения
 
-| Item | Env var / note |
-|------|----------------|
-| JWT algorithm | `ADMIN_JWT_ALGORITHM=HS256` (default OK) |
-| Access token TTL | `ADMIN_ACCESS_TOKEN_TTL_MINUTES` |
-| Public admin port | `ADMIN_HOST_PORT` |
-| Invite code(s) | created in DB (`invite_codes`), not env |
-| Resolver account(s) | optional `create-admin-user --role resolver --zone ...` |
-| Domain / public URL | for TLS reverse proxy (not required by app env today) |
+- Менеджер паролей, закрытая заметка, личная передача
+- **Не** класть в git, общий zip, открытый e-mail/чат, скриншоты
 
-## Optional / already have defaults
+Реальные `.env` / `.env.production` в репозиторий не коммитить.
 
-| Item | Env var |
-|------|---------|
-| Force IPv4 for Telegram | `BOT_FORCE_IPV4=true` |
-| Rate limits | `BOT_RATE_LIMIT_*` |
-| Upload limits | `MAX_ATTACHMENT_*`, `MAX_REPORT_TEXT_LENGTH` |
-| Allowed file types | `ALLOWED_DOCUMENT_*` |
+## Критично для запуска
 
-## Not used by current code (ignore if seen in old docs)
+Без этих значений система не заработает корректно:
 
-- `TELEGRAM_WEBHOOK_*` — bot uses polling, not webhooks
-- `SECRET_KEY` — not used; use `ADMIN_JWT_SECRET`
-- `ADMIN_EMAIL` / `ADMIN_PASSWORD` env bootstrap — use CLI `create-admin-user`
+| Секретные данные | Переменная окружения | Где используется |
+|------------------|----------------------|------------------|
+| Токен Telegram-бота | `TELEGRAM_BOT_TOKEN` | контейнер `bot` |
+| Пароль PostgreSQL | `POSTGRES_PASSWORD` | `postgres` и `DATABASE_URL` |
+| Строка подключения к БД | `DATABASE_URL` | `backend` и `bot` |
+| Секрет подписи JWT админки | `ADMIN_JWT_SECRET` | авторизация admin API |
+| Логин администратора | (CLI, не env) | `create-admin-user --email ...` |
+| Пароль администратора | (CLI, не env) | `create-admin-user --password ...` |
 
-## Checklist before handoff
+Формат `DATABASE_URL`:
 
-- [ ] Real `.env` is **not** inside the zip/repo
-- [ ] Placeholders only in `.env.production.example`
-- [ ] Secrets list delivered separately
-- [ ] Old Telegram token rotated if it ever leaked into chat/logs/history
+```text
+postgresql+asyncpg://USER:PASSWORD@postgres:5432/DB
+```
+
+Пароль в `DATABASE_URL` **обязан** совпадать с `POSTGRES_PASSWORD`.
+
+Также для промышленной среды: `APP_ENV=prod`.
+
+## Настоятельно рекомендуется
+
+| Параметр | Переменная / примечание |
+|----------|-------------------------|
+| Алгоритм JWT | `ADMIN_JWT_ALGORITHM=HS256` (значение по умолчанию подходит) |
+| Время жизни токена | `ADMIN_ACCESS_TOKEN_TTL_MINUTES` |
+| Публичный порт админки | `ADMIN_HOST_PORT` |
+| Invite-коды | создаются в БД (`invite_codes`), не через env |
+| Учётки resolver | опционально: `create-admin-user --role resolver --zone ...` |
+| Домен / публичный URL | для TLS reverse proxy (в env приложения сейчас не обязателен) |
+
+## Опционально (есть значения по умолчанию)
+
+| Параметр | Переменная окружения |
+|----------|----------------------|
+| Принудительный IPv4 к Telegram | `BOT_FORCE_IPV4=true` |
+| Rate limit бота | `BOT_RATE_LIMIT_*` |
+| Лимиты вложений / текста | `MAX_ATTACHMENT_*`, `MAX_REPORT_TEXT_LENGTH` |
+| Разрешённые типы файлов | `ALLOWED_DOCUMENT_*` |
+
+## Не используется текущим кодом
+
+Если встретите в старых документах — можно игнорировать:
+
+- `TELEGRAM_WEBHOOK_*` — бот работает через polling, не webhook
+- `SECRET_KEY` — не используется; нужен `ADMIN_JWT_SECRET`
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` в env — создание через CLI `create-admin-user`
+
+## Чеклист перед передачей
+
+- [ ] В архиве/репозитории **нет** реального `.env`
+- [ ] В `.env.production.example` только плейсхолдеры
+- [ ] Список секретных данных передан отдельно
+- [ ] Токен Telegram сменён, если ранее мог утечь в чат/логи/историю

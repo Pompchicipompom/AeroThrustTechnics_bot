@@ -1,61 +1,61 @@
-# Server requirements
+# Требования к серверу
 
-## OS
+## Операционная система
 
-- Ubuntu 22.04 / 24.04 LTS (recommended) or any Linux with Docker Engine
-- x86_64 or ARM64
+- Ubuntu 22.04 / 24.04 LTS (рекомендуется) или другой Linux с Docker Engine
+- Архитектура: x86_64 или ARM64
 
-## Software
+## Программное обеспечение
 
 - Docker Engine 24+
-- Docker Compose plugin v2 (`docker compose version`)
-- Optional: `curl`, `git`, `openssl`
+- Плагин Docker Compose v2 (`docker compose version`)
+- По желанию: `curl`, `git`, `openssl`
 
-Install helper (Ubuntu):
+Установка Docker на Ubuntu:
 
 ```bash
 bash infra/scripts/install_docker_ubuntu.sh
 ```
 
-## Hardware (MVP)
+## Аппаратные ресурсы (MVP)
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
+| Ресурс | Минимум | Рекомендуется |
+|--------|---------|---------------|
 | CPU | 1 vCPU | 2 vCPU |
 | RAM | 2 GB | 4 GB |
-| Disk | 20 GB SSD | 40+ GB SSD |
-| Network | outbound HTTPS to Telegram API | same |
+| Диск | 20 GB SSD | 40+ GB SSD |
+| Сеть | исходящий HTTPS к Telegram Bot API | то же |
 
-Disk grows with attachments under the `uploads_data` volume.
+Объём диска растёт вместе с вложениями в volume `uploads_data`.
 
-## Ports
+## Порты
 
-| Port | Purpose | Public? |
-|------|---------|---------|
-| `ADMIN_HOST_PORT` (default 80) | Admin UI + API proxy + `/healthz` | Yes (or via TLS proxy) |
-| 443 | HTTPS (if TLS terminator on host) | Yes |
-| 5432 Postgres | DB | **No** — not published by compose |
-| 6379 Redis | Cache/FSM | **No** — not published |
-| 8000 Backend | Internal only in prod | **No** in prod compose |
+| Порт | Назначение | Открывать наружу? |
+|------|------------|-------------------|
+| `ADMIN_HOST_PORT` (по умолчанию 80) | Админка + API proxy + `/healthz` | Да (или через TLS-прокси) |
+| 443 | HTTPS (если TLS на хосте) | Да |
+| 5432 (PostgreSQL) | База данных | **Нет** — в compose не публикуется |
+| 6379 (Redis) | Кэш / FSM | **Нет** — не публикуется |
+| 8000 (backend) | Внутренний API | **Нет** в prod compose |
 
-## Outbound access
+## Исходящий доступ
 
-Bot uses **long polling** to Telegram:
+Бот использует **long polling** к Telegram:
 
-- `https://api.telegram.org` must be reachable from the server
-- No inbound webhook port required for the bot
+- с сервера должен быть доступен `https://api.telegram.org`
+- входящий webhook-порт для бота **не нужен**
 
-If Telegram IPv6 is flaky on the VPS, keep `BOT_FORCE_IPV4=true` (default).
+Если на VPS нестабилен IPv6 до Telegram, оставьте `BOT_FORCE_IPV4=true` (значение по умолчанию).
 
-## Domain / TLS
+## Домен и TLS
 
-- Domain or public IP for admin UI
-- TLS certificate recommended (Let's Encrypt)
-- `TODO: проверить вручную` — company firewall / WAF rules
+- Домен или публичный IP для админ-панели
+- Рекомендуется TLS-сертификат (Let's Encrypt)
+- `TODO: проверить вручную` — правила firewall / WAF компании
 
-## Accounts needed from the company
+## Что нужно от компании
 
-1. Telegram Bot Token (BotFather)
-2. SSH access (if vendor deploys) with Docker permissions
-3. Domain DNS control (if HTTPS on company domain)
-4. Strong passwords / JWT secret (or ask vendor to generate and hand over via secure channel)
+1. Токен Telegram-бота (BotFather) — `TELEGRAM_BOT_TOKEN`
+2. SSH-доступ (если разворачивает подрядчик) с правами на Docker
+3. Управление DNS домена (если HTTPS на домене компании)
+4. Надёжные пароли и `ADMIN_JWT_SECRET` (или генерация подрядчиком с передачей по защищённому каналу)

@@ -1,53 +1,60 @@
-# What to send to the company
+# Что передать компании
 
-## Preferred
+## Предпочтительный вариант
 
-1. **Access to a private Git repository** with this project (branch `main` or a release tag).
-2. Folder **`deploy_bundle/`** (already in the repo) as the ops entry point.
-3. Secrets from **`SECRETS_REQUIRED.md`** via a **separate secure channel** (not in the repo).
+1. **Доступ к приватному Git-репозиторию** с этим проектом (ветка `main` или release-тег).
+2. Папку **`deploy_bundle/`** (уже есть в репозитории) — точка входа для IT.
+3. Файл **`.env.production.example`** (шаблон переменных окружения без секретов).
+4. Инструкции по запуску: **`deploy_bundle/README_DEPLOY.md`**.
+5. Список секретных данных: **`deploy_bundle/SECRETS_REQUIRED.md`**.
+6. **Реальные секретные данные** — отдельным защищённым способом (не в репозитории и не в общем архиве).
 
-## If git access is not possible
+## Если доступ к git невозможен
 
-Send a project archive that includes:
+Передать архив проекта, в котором есть:
 
 - `backend/`, `admin/`, `infra/`, `docs/`, `deploy_bundle/`
 - `docker-compose.yml`, `docker-compose.prod.yml`
 - `.env.example`, `.env.production.example`
 - `README.md`
 
-Exclude:
+**Не включать в архив:**
 
-- `.env` (real secrets)
+- реальный `.env` / `.env.production`
+- токены, пароли, JWT-секреты
+- дампы базы (`*.sql`, `*.sql.gz`)
+- каталоги `uploads/`, Docker volumes
 - `admin/node_modules/`, `admin/dist/`
-- Python venv / `__pycache__` / `.pytest_cache`
-- DB dumps, uploads, local Docker volumes
-- `.git` only if the company does not need history (optional)
+- Python venv, `__pycache__`, `.pytest_cache`
+- скриншоты с секретами
 
-## How they run it
+## Как компания запускает проект
 
-- Install Docker + Docker Compose on the company server
-- Follow `deploy_bundle/README_DEPLOY.md`
-- Fill `.env` from `.env.production.example` using secrets received separately
+1. Установить Docker и Docker Compose на сервере
+2. Следовать `deploy_bundle/README_DEPLOY.md`
+3. Создать `.env` из `.env.production.example` и заполнить секретные данные на сервере
+4. Пройти `deploy_bundle/CHECKLIST_BEFORE_PROD.md`
 
-## If the company wants us to deploy
+## Если компания просит развернуть у себя подрядчиком
 
-They should provide:
+Нужно предоставить:
 
-1. SSH access to the server
-2. A user with permission to run Docker (`docker` / root)
-3. Domain/DNS (optional but recommended for HTTPS)
-4. Telegram bot token and approval to use it on that server
+1. SSH-доступ к серверу
+2. Пользователя с правами на Docker (`docker` / root)
+3. Домен и DNS (желательно, для HTTPS)
+4. Токен Telegram-бота и разрешение использовать его на этом сервере
 
-## Do not send
+## Чего нельзя передавать в общем письме/архиве
 
-- Real `.env` files inside a shared zip
-- Screenshots that contain tokens
-- Old server backups that include unrelated projects’ secrets
+- Реальные файлы `.env`
+- Токены Telegram, пароли БД и админки, `ADMIN_JWT_SECRET`
+- Дампы базы и содержимое uploads
+- Бэкапы чужих проектов с сервера
 
-## Start here (company IT)
+## С чего начать IT компании
 
-1. `deploy_bundle/SERVER_REQUIREMENTS.md`
-2. `deploy_bundle/SECRETS_REQUIRED.md` (request secrets)
-3. `deploy_bundle/README_DEPLOY.md`
-4. `deploy_bundle/CHECKLIST_BEFORE_PROD.md`
-5. `deploy_bundle/AUDIT_REPORT.md` (known risks)
+1. `deploy_bundle/SERVER_REQUIREMENTS.md` — требования к серверу  
+2. `deploy_bundle/SECRETS_REQUIRED.md` — какие секретные данные запросить  
+3. `deploy_bundle/README_DEPLOY.md` — развёртывание  
+4. `deploy_bundle/CHECKLIST_BEFORE_PROD.md` — проверка перед промышленным запуском  
+5. `deploy_bundle/AUDIT_REPORT.md` — что проверено и какие риски остались  

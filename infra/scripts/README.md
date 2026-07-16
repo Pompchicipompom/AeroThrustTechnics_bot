@@ -1,9 +1,9 @@
-# Infra Scripts
+# Скрипты инфраструктуры
 
 ## Доступные скрипты
 
 `install_docker_ubuntu.sh`
-- Минимальная установка Docker Engine + Docker Compose plugin на Ubuntu.
+- Минимальная установка Docker Engine + плагина Docker Compose на Ubuntu.
 - Запускать от `root`.
 
 `deploy_vps.sh`
@@ -15,17 +15,20 @@
 - Показывает статус и выполняет базовые HTTP-проверки (если установлен `curl`).
 
 `backup_postgres.sh`
-- `pg_dump` → `backups/aerotrust_*.sql.gz` (по умолчанию `docker-compose.prod.yml`).
+- Резервное копирование БД: `pg_dump` → `backups/aerotrust_*.sql.gz`
+  (по умолчанию используется `docker-compose.prod.yml`).
 
 `backup_uploads.sh`
-- tar.gz содержимого `/app/uploads` из контейнера `backend`.
+- Резервное копирование вложений: tar.gz каталога `/app/uploads` из контейнера `backend`.
 
 ## Быстрый запуск
 
 ```bash
-# в корне проекта на VPS
+# в корне проекта на сервере
 cp .env.production.example .env
 nano .env
 
 bash infra/scripts/deploy_vps.sh
 ```
+
+Подробные инструкции для IT компании: `deploy_bundle/README_DEPLOY.md`.

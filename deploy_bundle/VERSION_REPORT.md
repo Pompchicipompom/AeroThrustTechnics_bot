@@ -1,21 +1,21 @@
-# Version report (from repository)
+# Отчёт о версиях (по репозиторию)
 
-Captured during production-readiness audit.
+Сформировано при подготовке к передаче в промышленную среду.
 
-## Application
+## Приложение
 
-| Component | Version / pin |
-|-----------|----------------|
-| Backend package | `aerotrust-backend` `0.1.0` (`backend/pyproject.toml`) |
-| Admin UI package | `aerotrust-admin-ui` `0.2.0` (`admin/package.json`) |
-| Python | `>=3.12` (runtime image `python:3.12-slim`) |
-| Node (build) | `node:20-alpine` |
-| Nginx (admin prod) | `nginx:1.27-alpine` |
+| Компонент | Версия / закрепление |
+|-----------|----------------------|
+| Backend-пакет | `aerotrust-backend` `0.1.0` (`backend/pyproject.toml`) |
+| Admin UI | `aerotrust-admin-ui` `0.2.0` (`admin/package.json`) |
+| Python | `>=3.12` (образ `python:3.12-slim`) |
+| Node (сборка) | `node:20-alpine` |
+| Nginx (admin, prod) | `nginx:1.27-alpine` |
 
-## Backend dependencies (ranges from `pyproject.toml`)
+## Зависимости backend (диапазоны из `pyproject.toml`)
 
-| Package | Constraint |
-|---------|------------|
+| Пакет | Ограничение |
+|-------|-------------|
 | aiogram | `>=3.7.0,<4.0.0` |
 | FastAPI | `>=0.110.0,<1.0.0` |
 | SQLAlchemy | `>=2.0.29,<3.0.0` |
@@ -27,35 +27,35 @@ Captured during production-readiness audit.
 | PyJWT | `>=2.8.0,<3.0.0` |
 | pydantic-settings | `>=2.2.1,<3.0.0` |
 
-## Admin dependencies (`admin/package.json` / lockfile)
+## Зависимости admin (`admin/package.json` / lockfile)
 
-| Package | Constraint |
-|---------|------------|
+| Пакет | Ограничение |
+|-------|-------------|
 | react / react-dom | `^18.3.1` |
-| vite | `^5.4.19` |
+| Vite | `^5.4.19` |
 | typescript | `^5.8.3` |
-| Lockfile | `admin/package-lock.json` present (use `npm ci` in prod build) |
+| Lockfile | есть `admin/package-lock.json` (в prod-сборке используется `npm ci`) |
 
-## Infrastructure images (`docker-compose*.yml`)
+## Образы инфраструктуры (`docker-compose*.yml`)
 
-| Service | Image |
-|---------|-------|
+| Сервис | Образ |
+|--------|-------|
 | PostgreSQL | `postgres:16-alpine` |
 | Redis | `redis:7-alpine` |
-| Backend / bot | build `./backend` (`python:3.12-slim`) |
-| Admin (dev) | build `./admin` (`node:20-alpine`) |
-| Admin (prod) | build `./admin` + `Dockerfile.prod` (`nginx:1.27-alpine`) |
+| backend / bot | сборка `./backend` (`python:3.12-slim`) |
+| admin (dev) | сборка `./admin` (`node:20-alpine`) |
+| admin (prod) | сборка `./admin` + `Dockerfile.prod` (`nginx:1.27-alpine`) |
 
-## Migrations
+## Миграции базы данных
 
-| Revision | File |
-|----------|------|
-| `20260421_0001` | Initial schema |
-| `20260421_0002` | Admin API indexes |
+| Ревизия | Описание |
+|---------|----------|
+| `20260421_0001` | Начальная схема |
+| `20260421_0002` | Индексы для admin API |
 
-Apply: `alembic upgrade head` (via deploy script or compose).
+Применение: `alembic upgrade head` (через скрипт деплоя или Compose).
 
-## Notes
+## Примечания
 
-- Exact installed pip/npm versions inside images depend on build time resolution of ranges.
-- `TODO: проверить вручную` — after first company build, run `docker compose ... exec backend pip freeze` and attach to ops notes if pin audit is required.
+- Точные версии pip/npm внутри образов зависят от разрешения диапазонов на момент сборки.
+- `TODO: проверить вручную` — после первой сборки на сервере компании при необходимости снять `pip freeze` из контейнера `backend` и приложить к эксплуатационным заметкам.

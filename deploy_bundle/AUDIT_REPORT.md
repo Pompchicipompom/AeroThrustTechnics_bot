@@ -1,153 +1,155 @@
-# Audit report — AeroThrust Trusted Messages MVP
+# Отчёт об аудите — AeroThrust Trusted Messages MVP
 
-Date: 2026-07-16  
-Scope: local repository + Docker stack readiness for transfer to a company server.
+Дата: 2026-07-16  
+Область: локальный репозиторий и готовность Docker-стека к передаче на сервер компании.
 
-## What was checked
+## Что проверено
 
-1. Project structure (bot, backend, admin, postgres, redis, nginx-in-admin)
-2. Telegram bot: token from env, handlers, attachments, errors, rate limit
-3. Backend/API: health, auth, RBAC, error handlers, OpenAPI in prod
-4. Admin UI: API base URL, empty states, roles at API layer
-5. Database: PostgreSQL + Alembic + Docker volumes
-6. Docker Compose (dev + prod)
-7. Uploads persistence and path safety
-8. Secrets / `.env*` / `.gitignore`
-9. Security: exposed ports, JWT, anonymity in API/UI
-10. Logs / deploy scripts / documentation package `deploy_bundle/`
-11. Local smoke: running stack health, persistence after restart
+1. Структура проекта (бот, backend, admin, postgres, redis, nginx в admin)
+2. Telegram-бот: токен из переменных окружения, обработчики, вложения, ошибки, rate limit
+3. Backend/API: проверка работоспособности (`/healthz`), авторизация, RBAC, обработка ошибок, OpenAPI в prod
+4. Админка: базовый URL API, пустые состояния, роли на уровне API
+5. База данных: PostgreSQL + Alembic + Docker volumes
+6. Docker Compose (dev и prod)
+7. Сохранность вложений и безопасность путей файлов
+8. Секретные данные / `.env*` / `.gitignore`
+9. Безопасность: открытые порты, JWT, анонимность в API/UI
+10. Логи, скрипты деплоя, пакет документации `deploy_bundle/`
+11. Базовая проверка запуска: стек, сохранность данных после перезапуска
 
-## Architecture (as-is)
+## Архитектура (как есть)
 
 ```
-Telegram ←polling→ bot ──┬──► PostgreSQL (reports, users, admin_users, …)
+Telegram ←polling→ bot ──┬──► PostgreSQL (обращения, пользователи, admin_users, …)
                          ├──► Redis (FSM + rate limit)
-                         └──► uploads volume
-Browser → admin(nginx|vite) → backend(FastAPI) → PostgreSQL + uploads
+                         └──► volume uploads
+Браузер → admin(nginx|vite) → backend(FastAPI) → PostgreSQL + uploads
 ```
 
-## Findings
+## Что исправлено
 
-### Critical / high (fixed in this audit)
+| Проблема | Исправление |
+|----------|-------------|
+| `PyJWT` использовался в коде, но отсутствовал в `pyproject.toml` | Добавлена явная зависимость |
+| Неполный `.env.example` относительно `Settings` | Приведён в соответствие с конфигурацией |
+| В dev у Redis не было volume (FSM терялся при recreate) | Добавлен volume `redis_data` в `docker-compose.yml` |
+| У backend в dev не было healthcheck; admin не ждал готовности | Healthcheck + условие `service_healthy` |
+| В prod были открыты OpenAPI/docs | Отключены при `APP_ENV=prod` / `production` |
+| Не было ограничения длины текста обращения | `MAX_REPORT_TEXT_LENGTH` (по умолчанию 4000) |
+| Хрупкий hardcoded IP Telegram в prod compose | Удалён; используется `BOT_FORCE_IPV4` |
+| Не хватало документации для передачи и handoff секретов | Добавлены `deploy_bundle/` и скрипты backup |
+| Пробелы в `.gitignore` | Расширен (`.DS_Store`, `.env.production`, дампы и т.п.) |
 
-| Issue | Fix |
-|-------|-----|
-| `PyJWT` used in code but missing from `pyproject.toml` | Added explicit dependency |
-| Dev `.env.example` incomplete vs `Settings` | Fully aligned with config |
-| Dev Redis without volume (FSM lost on recreate) | Added `redis_data` volume to `docker-compose.yml` |
-| Dev backend without healthcheck; admin didn't wait healthy | Healthcheck + `service_healthy` |
-| Prod OpenAPI/docs exposed | Disabled when `APP_ENV=prod\|production` |
-| No max length on report text | `MAX_REPORT_TEXT_LENGTH` (default 4000) in bot |
-| Brittle hardcoded Telegram IP in prod compose | Removed; rely on `BOT_FORCE_IPV4` |
-| Missing production docs / secrets handoff | Added `deploy_bundle/` + backup scripts |
-| `.gitignore` gaps (`.DS_Store`, `.env.production`, dumps) | Expanded |
+## Средний приоритет (задокументировано, код не переписывался)
 
-### Medium (documented, not rewritten)
+| Вопрос | Статус |
+|--------|--------|
+| У анонимных обращений в БД может храниться `author_user_id` (в админке скрыт) | Нужно для сценария «мои обращения» в боте; при прямом доступе к БД возможна деанонимизация — сообщить компании |
+| Хелпер `require_roles()` не используется на уровне роутов; зональный RBAC в репозиториях | Для admin/resolver работает; декоратор на роутах — опциональное улучшение |
+| Нет CORS middleware | Нормально при same-origin через nginx/vite; нужен только если SPA на другом домене |
+| `infra/nginx/default.conf` не подключён к compose | Вспомогательный файл; не удалён |
+| `docs/04_env_example.env` устарел | Актуальные шаблоны — `.env.example` и `.env.production.example` |
+| Integration-тесты создают схему через `create_all`, не Alembic | Риск расхождения; на деплое миграции всё равно через Alembic |
+| Fallback в `deploy_vps.sh` при лимите Docker Hub может пересобрать только backend | Операционный риск, описан |
 
-| Issue | Status |
-|-------|--------|
-| Anonymous reports still store `author_user_id` in DB (hidden in admin API/UI) | By design for “my reports” in bot; DB-level deanonymization possible with raw SQL access — document for company |
-| `require_roles()` helper unused at route layer; zone RBAC enforced in repositories | Works for admin/resolver scopes; route-level decorator optional improvement |
-| No CORS middleware | OK for same-origin nginx/vite proxy; needed only if SPA hosted on another origin |
-| `infra/nginx/default.conf` not used by compose | Orphan helper; left in place (not deleted) |
-| `docs/04_env_example.env` outdated vs real settings | Listed as stale planning doc; real source is `.env*.example` |
-| Integration tests use `create_all` not Alembic | Drift risk; CI should still run Alembic on deploy |
-| Prod fallback in `deploy_vps.sh` may rebuild only backend image on Hub rate limit | Documented operational risk |
+## Низкий приоритет / оставлено без удаления
 
-### Low / leftovers (not deleted)
+| Элемент | Примечание |
+|---------|------------|
+| `README_FOR_CODEX.md` | Внутренние заметки — оставлен |
+| `infra/docker/README.md` | Заглушка |
+| Локальный `.env` с токеном | В `.gitignore`; сменить токен при утечке |
 
-| Item | Note |
-|------|------|
-| `README_FOR_CODEX.md` | Internal agent notes — keep |
-| `infra/docker/README.md` | Placeholder |
-| Multiple nginx backup filenames historically on old VPS | N/A in this clean repo |
-| Local `.env` with real token | Gitignored; rotate if ever leaked |
+Мусорных артефактов сборки (`node_modules`, `__pycache__`, `.DS_Store`, `*.bak`) в чистом клоне не было.  
+`docs/*` и `infra/nginx/default.conf` без согласования с компанией не удалять.
 
-### Garbage candidates (not deleted — none present as build artifacts)
+## Безопасность
 
-- No `node_modules`, `__pycache__`, `.DS_Store`, `*.bak` in clean clone
-- Do not delete `docs/*` or `infra/nginx/default.conf` without company confirmation
+- Admin API требует JWT, кроме `POST /admin/auth/login`
+- PostgreSQL и Redis в prod compose наружу не публикуются
+- Для `submit_mode=anonymous` автор скрыт в UI/API админки
+- Режим «открыто» (не анонимно) показывает technical id и telegram username — это продуктовое поведение
+- `TODO: проверить вручную` — TLS, политика паролей, ротация токена, firewall хоста
 
-## Security notes
+## Контекст потери данных (эксплуатация)
 
-- Admin API requires JWT except `POST /admin/auth/login`
-- Postgres/Redis not published in prod compose
-- Admin UI hides author for `submit_mode=anonymous`
-- Open (non-anonymous) mode still shows technical id + telegram username — product feature
-- `TODO: проверить вручную` — TLS terminator, password policy, token rotation, host firewall
+На прежнем общем VPS volume PostgreSQL AeroThrust уже отсутствовал до этого аудита.  
+Текущий пакет снижает риск повторения: именованные volumes, скрипты backup, явный запрет `down -v` в документации.
 
-## Data loss incident context (ops)
+## Что протестировано (базовая проверка запуска)
 
-On the previous shared VPS, AeroThrust Postgres volume was already gone before this audit.
-This package hardens against recurrence: named volumes, backup scripts, explicit “never `down -v`” docs.
-
-## Smoke test results (this machine)
-
-| Check | Result |
-|-------|--------|
+| Проверка | Результат |
+|----------|-----------|
 | `GET /healthz` | OK |
-| Admin UI HTTP | 200 on `:5173` |
-| Admin login + reports list | OK (JWT + probe report visible) |
-| Bot polling | Running (`@AeroThrustTechnics_bot`) |
-| Data after `docker compose restart` | OK — probe report still in Postgres |
-| Redis named volume | Created (`aerotrust_redis_data`) |
-| Unit tests (`test_rate_limit`, `test_report_flow_attachments`) | 8 passed |
+| Admin UI HTTP | 200 на `:5173` |
+| Вход в админку + список обращений | OK |
+| Polling бота | Работает |
+| Данные после `docker compose restart` | OK — тестовая запись в PostgreSQL сохранилась |
+| Named volume Redis | Создан (`aerotrust_redis_data`) |
+| Unit-тесты (`test_rate_limit`, `test_report_flow_attachments`) | 8 passed |
 | `docker-compose.prod.yml config` | OK |
-| Prod admin image build (`Dockerfile.prod`) | OK |
-| Secret scan of tracked files vs local `.env` token | none |
-| Full Telegram e2e new report via bot UI | `TODO: проверить вручную` |
-| Integration pytest suite (needs test DB) | `TODO: проверить вручную` |
-| HTTPS / company domain | `TODO: проверить вручную` |
+| Сборка prod-образа admin (`Dockerfile.prod`) | OK |
+| Скан отслеживаемых файлов на реальный токен из локального `.env` | совпадений нет |
+| Полный e2e нового обращения через Telegram UI | `TODO: проверить вручную` |
+| Integration pytest (нужна test DB) | `TODO: проверить вручную` |
+| HTTPS / домен компании | `TODO: проверить вручную` |
 
-## Files added / changed
+## Добавленные / изменённые файлы (аудит)
 
-### Added
+### Добавлено
 
-- `deploy_bundle/*` (8 docs)
+- `deploy_bundle/*`
 - `infra/scripts/backup_postgres.sh`
 - `infra/scripts/backup_uploads.sh`
 
-### Updated
+### Обновлено
 
 - `backend/pyproject.toml` — PyJWT
-- `backend/app/core/config.py` — max text length
-- `backend/app/bot/handlers/report_flow.py` — enforce max text
-- `backend/app/main.py` — hide docs in prod
+- `backend/app/core/config.py` — лимит длины текста
+- `backend/app/bot/handlers/report_flow.py` — проверка длины текста
+- `backend/app/main.py` — скрытие docs в prod
 - `.env.example`, `.env.production.example`
 - `.gitignore`
-- `docker-compose.yml` — redis volume + healthchecks
-- `docker-compose.prod.yml` — remove hardcoded Telegram IP
-- `README.md` — ops/logs/backup pointers
+- `docker-compose.yml` — volume Redis + healthcheck
+- `docker-compose.prod.yml` — убран hardcoded IP Telegram
+- `README.md` — логи, backup, ссылка на `deploy_bundle/`
 
-## How to run (short)
+## Как запускать (кратко)
 
-**Dev:**
+**Разработка:**
 
 ```bash
-cp .env.example .env   # fill TELEGRAM_BOT_TOKEN
+cp .env.example .env
 docker compose up -d --build
 docker compose exec backend alembic upgrade head
 ```
 
-**Prod:**
+**Production:**
 
 ```bash
-cp .env.production.example .env   # fill secrets
+cp .env.production.example .env
 bash infra/scripts/deploy_vps.sh
 ```
 
-## Remaining risks for the company
+## Какие риски остались
 
-1. No automated nightly backups until cron is configured
-2. Anonymity is API/UI-level, not cryptographic unlinkability in DB
-3. Single-host Docker MVP — no HA/replicas
-4. Telegram polling depends on outbound network reliability
-5. Admin port is HTTP unless they add TLS
+1. Нет автоматических ночных backup, пока не настроен cron
+2. Анонимность на уровне API/UI, не криптографическая несвязность в БД
+3. MVP на одном хосте Docker — без HA/реплик
+4. Polling Telegram зависит от исходящей сети
+5. Порт админки — HTTP, пока компания не добавит TLS
 
-## What to clarify with the company
+## Что нужно проверить вручную
 
-- Domain + HTTPS ownership
-- Who stores Telegram token / admin passwords
-- Backup retention policy
-- Whether open (non-anonymous) submit mode should remain enabled
-- SSH access if vendor deploys
+- Полный сценарий бота в Telegram end-to-end
+- Integration-тесты на стенде компании
+- HTTPS, DNS, firewall
+- Политика хранения и ротации секретных данных
+
+## Что важно уточнить у компании
+
+- Кто владеет доменом и HTTPS
+- Кто хранит токен Telegram и пароли админки
+- Срок хранения резервных копий
+- Нужен ли режим «открытого» (неанонимного) обращения
+- Нужен ли SSH-доступ подрядчику для деплоя

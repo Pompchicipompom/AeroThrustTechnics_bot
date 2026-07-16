@@ -24,7 +24,8 @@ docs/           product/tech docs (planning)
 deploy_bundle/  пакет для передачи IT компании (деплой, секреты, аудит)
 ```
 
-Production-инструкция: [`deploy_bundle/README_DEPLOY.md`](deploy_bundle/README_DEPLOY.md).
+Production-инструкция: [`deploy_bundle/README_DEPLOY.md`](deploy_bundle/README_DEPLOY.md).  
+Что передать компании: [`deploy_bundle/WHAT_TO_SEND_TO_COMPANY.md`](deploy_bundle/WHAT_TO_SEND_TO_COMPANY.md).
 
 ## Предварительные требования
 1. Docker Desktop запущен.
@@ -196,7 +197,7 @@ docker compose down
 # docker compose down -v
 ```
 
-### Backup (prod)
+### Резервное копирование (prod)
 ```bash
 bash infra/scripts/backup_postgres.sh
 bash infra/scripts/backup_uploads.sh
@@ -207,9 +208,9 @@ Volumes, которые нужно сохранять при переносе с
 - `aerotrust_uploads_data` — файлы вложений
 - `aerotrust_redis_data` — FSM (некритично)
 
-## Known limitations
+## Известные ограничения
 - В локальном `docker-compose.yml` admin работает как Vite dev server.
-- Для VPS используется `docker-compose.prod.yml` с production static build + nginx.
-- E2E UI-проверка требует ручного открытия браузера (в CI не автоматизирована).
-- Для полного bot smoke обязателен валидный Telegram token.
-- Runtime backend image не включает dev-зависимости и тесты (покрывается bind-mount командой выше).
+- Для VPS используется `docker-compose.prod.yml` со static-сборкой и Nginx.
+- E2E-проверка UI требует ручного открытия браузера (в CI не автоматизирована).
+- Для полной базовой проверки бота нужен валидный `TELEGRAM_BOT_TOKEN`.
+- Runtime-образ backend не включает dev-зависимости и тесты (запуск тестов — через bind-mount, см. выше).

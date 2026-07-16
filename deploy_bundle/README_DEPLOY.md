@@ -1,60 +1,62 @@
-# Production deployment guide
+# Развёртывание в production / промышленной среде
 
-## Overview
+## Состав проекта
 
-Services (Docker Compose production stack):
+Стек Docker Compose для промышленного запуска:
 
-| Service | Role |
-|---------|------|
-| `postgres` | PostgreSQL 16 — reports, users, admin accounts |
-| `redis` | Redis 7 — bot FSM + rate limiting |
-| `backend` | FastAPI API (admin + health) |
-| `bot` | Telegram bot (aiogram polling) |
-| `admin` | Static admin SPA + nginx reverse proxy |
+| Сервис | Назначение |
+|--------|------------|
+| `postgres` | PostgreSQL 16 — обращения, пользователи, учётки админки |
+| `redis` | Redis 7 — FSM бота и ограничение частоты запросов |
+| `backend` | API на FastAPI (админка + проверка работоспособности) |
+| `bot` | Telegram-бот (aiogram, long polling) |
+| `admin` | Статическая админ-панель + Nginx (reverse proxy) |
 
-Public entry point in production: **admin nginx** on `ADMIN_HOST_PORT` (default `80`).
-It serves `/admin/` UI and proxies `/admin/*` API + `/healthz` to backend.
-PostgreSQL and Redis ports are **not** published.
+Публичная точка входа в production: контейнер `admin` (Nginx) на порту `ADMIN_HOST_PORT` (по умолчанию `80`).
 
-## 1. Server prerequisites
+Он отдаёт интерфейс `/admin/`, проксирует API `/admin/*` и `/healthz` на `backend`.  
+Порты PostgreSQL и Redis **наружу не открываются**.
 
-See `SERVER_REQUIREMENTS.md`.
+## 1. Требования к серверу
 
-## 2. Get the project
+См. `SERVER_REQUIREMENTS.md`.
 
-Prefer a private git clone:
+## 2. Получение проекта
+
+Предпочтительно — клон приватного репозитория:
 
 ```bash
 git clone <PRIVATE_REPO_URL> aerotrust
 cd aerotrust
 ```
 
-Or unpack the company archive (without real `.env`).
+Либо распаковать архив проекта **без** реального файла `.env`.
 
-## 3. Create `.env`
+## 3. Подготовка переменных окружения (`.env`)
 
 ```bash
 cp .env.production.example .env
-nano .env   # or vim
+nano .env
 ```
 
-Replace at least:
+Обязательно заменить плейсхолдеры:
 
-- `POSTGRES_PASSWORD` (and the same password inside `DATABASE_URL`)
-- `ADMIN_JWT_SECRET` (long random string)
+- `POSTGRES_PASSWORD` (тот же пароль должен быть в `DATABASE_URL`)
+- `ADMIN_JWT_SECRET` (длинная случайная строка)
 - `TELEGRAM_BOT_TOKEN`
 
-See `SECRETS_REQUIRED.md`.
+Реальные значения лучше заполнять **прямо на сервере компании**.  
+Список секретных данных: `SECRETS_REQUIRED.md`.
 
-## 4. Deploy
+## 4. Запуск через Docker Compose
 
-From the project root:
+Из корня проекта:
 
 ```bash
 bash infra/scripts/deploy_vps.sh
 ```
 
-Or manually:
+Или вручную:
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
@@ -62,16 +64,18 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps backend alembic upg
 docker compose -f docker-compose.prod.yml up -d backend bot admin
 ```
 
-## 5. Bootstrap once
+Миграции БД применяются командой `alembic upgrade head` (входит в скрипт деплоя).
 
-Create admin user:
+## 5. Первичная настройка (один раз)
+
+Создать пользователя админки:
 
 ```bash
 docker compose -f docker-compose.prod.yml exec backend \
   create-admin-user --email admin --password '<STRONG_PASSWORD>' --role admin
 ```
 
-Create invite code for employees:
+Создать invite-код для сотрудников:
 
 ```bash
 docker compose -f docker-compose.prod.yml exec postgres \
@@ -81,7 +85,7 @@ docker compose -f docker-compose.prod.yml exec postgres \
    ON CONFLICT DO NOTHING;"
 ```
 
-Optional resolver (zone-scoped):
+Опционально — пользователь с ролью `resolver` (доступ только к своей зоне):
 
 ```bash
 docker compose -f docker-compose.prod.yml exec backend \
@@ -89,7 +93,7 @@ docker compose -f docker-compose.prod.yml exec backend \
   --role resolver --zone process
 ```
 
-## 6. Verify
+## 6. Проверка работоспособности
 
 ```bash
 docker compose -f docker-compose.prod.yml ps
@@ -97,17 +101,17 @@ curl -fsS http://127.0.0.1:${ADMIN_HOST_PORT:-80}/healthz
 curl -fsS http://127.0.0.1:${ADMIN_HOST_PORT:-80}/admin/
 ```
 
-Open admin UI: `http://<server-ip-or-domain>/admin/`  
-Login with the admin credentials created above.
+Админка: `http://<IP-или-домен>/admin/`  
+Вход — учётка, созданная на шаге 5.
 
-Bot smoke:
+Базовая проверка запуска бота:
 
-1. Open the bot in Telegram → `/start`
-2. Enter invite code
-3. Submit a test report
-4. Confirm it appears in admin → Reports
+1. Открыть бота в Telegram → `/start`
+2. Ввести invite-код
+3. Отправить тестовое обращение
+4. Убедиться, что оно появилось в админке (вкладка Reports)
 
-## 7. Logs
+## 7. Логи
 
 ```bash
 docker compose -f docker-compose.prod.yml logs -f
@@ -117,49 +121,73 @@ docker compose -f docker-compose.prod.yml logs -f admin
 docker compose -f docker-compose.prod.yml ps
 ```
 
-## 8. Data persistence (critical)
+## 8. Остановка
 
-Named volumes (do **not** use `docker compose down -v` in production):
+Остановка без удаления данных:
 
-| Volume | Contents |
-|--------|----------|
-| `aerotrust_postgres_data` | All reports / users / invite codes |
-| `aerotrust_uploads_data` | Attachment files |
-| `aerotrust_redis_data` | Bot FSM / rate-limit state (non-critical) |
+```bash
+docker compose -f docker-compose.prod.yml down
+```
 
-`docker compose down` (without `-v`) keeps volumes.
-`docker compose down -v` **deletes** the database and uploads.
+**Не использовать** в production:
 
-## 9. Backup / restore
+```bash
+docker compose -f docker-compose.prod.yml down -v
+```
 
-See commands in `CHECKLIST_BEFORE_PROD.md` and:
+Флаг `-v` удаляет volumes — пропадут база и вложения.
+
+## 9. Хранение данных (критично)
+
+Именованные volumes Docker:
+
+| Volume | Содержимое |
+|--------|------------|
+| `aerotrust_postgres_data` | Обращения, пользователи, invite-коды |
+| `aerotrust_uploads_data` | Файлы вложений |
+| `aerotrust_redis_data` | FSM бота / rate limit (некритично) |
+
+## 10. Резервное копирование и восстановление
 
 ```bash
 bash infra/scripts/backup_postgres.sh
 bash infra/scripts/backup_uploads.sh
 ```
 
-Restore example:
+Восстановление БД (пример):
 
 ```bash
-# Stop writers first if possible
+# По возможности остановите запись (backend/bot) перед восстановлением
 gunzip -c backups/aerotrust_YYYYMMDD.sql.gz | \
   docker compose -f docker-compose.prod.yml exec -T postgres \
   psql -U aerotrust -d aerotrust
 ```
 
-## 10. Update / redeploy
+Дополнительные команды — в `CHECKLIST_BEFORE_PROD.md`.
+
+## 11. Обновление
 
 ```bash
-git pull   # or rsync new code
+git pull
 bash infra/scripts/deploy_vps.sh
 ```
 
-Migrations run as part of deploy. Always backup DB before major updates.
+Перед крупным обновлением сделайте backup БД. Миграции выполняются в процессе деплоя.
 
-## 11. HTTPS / domain
+## 12. HTTPS и домен
 
-Compose exposes plain HTTP on `ADMIN_HOST_PORT`.
-For production, put TLS in front (host nginx, Caddy, Traefik, or cloud LB) and proxy to the admin container.
+Compose отдаёт HTTP на `ADMIN_HOST_PORT`.  
+Для промышленной среды рекомендуется TLS-терминация спереди (Nginx / Caddy / Traefik / балансировщик) с проксированием на контейнер `admin`.
 
-`TODO: проверить вручную` — DNS A-запись, сертификат Let's Encrypt, firewall (only 80/443 public).
+`TODO: проверить вручную` — DNS A-запись, сертификат Let's Encrypt, firewall (снаружи только 80/443).
+
+## 13. Типовые ошибки
+
+| Симптом | Что проверить |
+|---------|----------------|
+| Контейнер не стартует | `docker compose -f docker-compose.prod.yml ps` и `logs` соответствующего сервиса |
+| `/healthz` недоступен | Статус `backend` и `postgres`, корректность `DATABASE_URL` |
+| Бот не отвечает | `TELEGRAM_BOT_TOKEN`, исходящий доступ к `api.telegram.org`, логи `bot` |
+| Админка белый экран | Сборка `admin`, логи Nginx, что открыт именно `/admin/` |
+| Ошибка логина в админку | Пользователь создан через `create-admin-user`, верный `ADMIN_JWT_SECRET` |
+| Данные пропали после перезапуска | Не использовался ли `down -v`; на месте ли volumes |

@@ -1,48 +1,48 @@
-# Checklist before production
+# Чеклист перед запуском в production
 
-## Code / package
+## Код и пакет передачи
 
-- [ ] Private repo access OR clean project archive without `.env` / `node_modules` / caches
-- [ ] `deploy_bundle/` included
-- [ ] `.env.production.example` reviewed
-- [ ] No real tokens in git history for the handoff branch
+- [ ] Доступ к приватному репозиторию **или** чистый архив без `.env` / `node_modules` / кэшей
+- [ ] В комплекте есть папка `deploy_bundle/`
+- [ ] Просмотрен `.env.production.example`
+- [ ] В передаваемой ветке нет реальных токенов в истории git
 
-## Server
+## Сервер
 
-- [ ] Docker + Compose installed
-- [ ] Disk space OK (attachments grow)
-- [ ] Outbound access to `api.telegram.org`
-- [ ] Firewall: only needed ports open (80/443)
-- [ ] Postgres/Redis not exposed publicly
+- [ ] Установлены Docker и Docker Compose
+- [ ] Достаточно места на диске (вложения растут)
+- [ ] Есть исходящий доступ к `api.telegram.org`
+- [ ] Firewall: снаружи только нужные порты (80/443)
+- [ ] PostgreSQL и Redis не открыты в интернет
 
-## Secrets
+## Секретные данные
 
-- [ ] Strong `POSTGRES_PASSWORD`
-- [ ] Matching password in `DATABASE_URL`
-- [ ] Strong unique `ADMIN_JWT_SECRET` (not `change-me-for-prod`)
-- [ ] Valid `TELEGRAM_BOT_TOKEN`
-- [ ] Strong admin password (not README examples)
+- [ ] Надёжный `POSTGRES_PASSWORD`
+- [ ] Тот же пароль в `DATABASE_URL`
+- [ ] Уникальный сильный `ADMIN_JWT_SECRET` (не `change-me-for-prod`)
+- [ ] Действительный `TELEGRAM_BOT_TOKEN`
+- [ ] Сильный пароль администратора (не примеры из README)
 - [ ] `APP_ENV=prod`
 
-## First boot
+## Первый запуск
 
-- [ ] `bash infra/scripts/deploy_vps.sh` succeeds
-- [ ] `curl /healthz` returns `status: ok`
-- [ ] `/admin/` loads
-- [ ] Admin user created
-- [ ] Invite code created
-- [ ] Bot `/start` + invite works
-- [ ] Test report appears in admin
-- [ ] Status change works
-- [ ] Attachment upload (if used) works and is downloadable in admin
+- [ ] Успешно выполнен `bash infra/scripts/deploy_vps.sh`
+- [ ] `curl /healthz` возвращает `status: ok`
+- [ ] Открывается `/admin/`
+- [ ] Создан пользователь админки
+- [ ] Создан invite-код
+- [ ] Бот: `/start` + invite-код работает
+- [ ] Тестовое обращение видно в админке
+- [ ] Смена статуса обращения работает
+- [ ] Вложение (если используется) сохраняется и скачивается из админки
 
-## Persistence
+## Сохранность данных
 
-- [ ] Team knows: **never** `docker compose down -v` on prod
-- [ ] Backup script tested once
-- [ ] Volumes listed and documented for the hoster
+- [ ] Команда знает: в production **нельзя** `docker compose down -v`
+- [ ] Хотя бы раз проверен скрипт резервного копирования
+- [ ] Volumes зафиксированы в эксплуатационной документации хостинга
 
-### Backup commands (PostgreSQL)
+### Резервное копирование PostgreSQL
 
 ```bash
 mkdir -p backups
@@ -50,15 +50,19 @@ docker compose -f docker-compose.prod.yml exec -T postgres \
   pg_dump -U aerotrust aerotrust | gzip > "backups/aerotrust_$(date +%Y%m%d_%H%M%S).sql.gz"
 ```
 
-Or: `bash infra/scripts/backup_postgres.sh`
+Или:
 
-### Backup uploads
+```bash
+bash infra/scripts/backup_postgres.sh
+```
+
+### Резервное копирование вложений
 
 ```bash
 bash infra/scripts/backup_uploads.sh
 ```
 
-### Restore DB (destructive — replaces data)
+### Восстановление БД (перезаписывает данные)
 
 ```bash
 gunzip -c backups/aerotrust_YYYYMMDD_HHMMSS.sql.gz | \
@@ -66,26 +70,26 @@ gunzip -c backups/aerotrust_YYYYMMDD_HHMMSS.sql.gz | \
   psql -U aerotrust -d aerotrust
 ```
 
-### Restart safety check
+### Проверка после перезапуска
 
 ```bash
 docker compose -f docker-compose.prod.yml restart
 docker compose -f docker-compose.prod.yml ps
-# confirm reports still present in admin UI
+# убедиться, что обращения по-прежнему видны в админке
 ```
 
-## Security
+## Безопасность
 
-- [ ] TLS in front of admin (recommended)
-- [ ] Default README passwords not used
-- [ ] `/docs` unavailable when `APP_ENV=prod`
-- [ ] Admin login required for reports API
-- [ ] Anonymous reports hide author in admin UI/API
+- [ ] Перед админкой настроен TLS (рекомендуется)
+- [ ] Не используются пароли-примеры из README
+- [ ] При `APP_ENV=prod` недоступен `/docs`
+- [ ] API обращений требует авторизации администратора
+- [ ] Для анонимных обращений автор скрыт в UI/API админки
 
-## Manual TODOs
+## Проверить вручную
 
-- [ ] `TODO: проверить вручную` — HTTPS certificate + domain
-- [ ] `TODO: проверить вручную` — company SSO / VPN if required
-- [ ] `TODO: проверить вручную` — Telegram bot privacy settings / description
-- [ ] `TODO: проверить вручную` — nightly backup cron on host
-- [ ] `TODO: проверить вручную` — monitoring / uptime alerts
+- [ ] `TODO: проверить вручную` — HTTPS-сертификат и домен
+- [ ] `TODO: проверить вручную` — SSO / VPN компании (если требуется)
+- [ ] `TODO: проверить вручную` — настройки приватности и описание бота в Telegram
+- [ ] `TODO: проверить вручную` — ночной cron резервного копирования на хосте
+- [ ] `TODO: проверить вручную` — мониторинг / оповещения о доступности
